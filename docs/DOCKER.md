@@ -1,5 +1,7 @@
 # Building and Testing Docker Images
 
+Note: This document details the specifics of building and managing Docker container images for OpenDuelyst services. If you are looking for a step-by-step guide to set up a local server environment using Docker as part of a full client development workflow, please refer to [PC Build From Zero: A Developer's Guide](PC_BUILD_FROM_ZERO.md) or [Web-based Mobile Build From Zero: A Developer's Guide](MOBILE_WEB_BUILD_FROM_ZERO.md).
+
 Dockerfiles and scripts for starting and managing our containers are located in
 the `docker/` directory.
 

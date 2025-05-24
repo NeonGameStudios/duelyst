@@ -1,5 +1,7 @@
 # Building the Desktop Client
 
+Note: This document provides specific details about building the desktop client once the JavaScript client is built. For a comprehensive guide on setting up a full development environment from scratch, including local server setup and then building the PC client, please see [PC Build From Zero: A Developer's Guide](PC_BUILD_FROM_ZERO.md).
+
 ## One-Time Setup
 
 Install `cross-env` with `npm install -g cross-env`, which is used to support
