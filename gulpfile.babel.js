@@ -35,24 +35,104 @@ gutil.log(`${gutil.colors.red(`GULP :: env: ${env} :: version: ${version}`)}`);
 gutil.log(`${gutil.colors.yellow(`GULP :: minification = ${opts.minify}`)}`);
 
 // Define main tasks
-gulp.task('clean:all', clean.all);
+gulp.task('clean:all', (cb) => {
+  gutil.log('Starting task clean:all...');
+  try {
+    return clean.all(cb);
+  } catch (error) {
+    gutil.log(gutil.colors.red('Error in task clean:all:'), error);
+    cb(error);
+  } finally {
+    gutil.log('Finished task clean:all.');
+  }
+});
 gulp.task('clean:app', clean.app);
 gulp.task('clean:web', clean.web);
 gulp.task('clean:locales', clean.locales);
 gulp.task('clean:git', clean.git);
-gulp.task('css', css);
-gulp.task('html', html.main);
+gulp.task('css', (cb) => {
+  gutil.log('Starting task css...');
+  try {
+    return css(cb);
+  } catch (error) {
+    gutil.log(gutil.colors.red('Error in task css:'), error);
+    cb(error);
+  } finally {
+    gutil.log('Finished task css.');
+  }
+});
+gulp.task('html', (cb) => {
+  gutil.log('Starting task html...');
+  try {
+    return html.main(cb);
+  } catch (error) {
+    gutil.log(gutil.colors.red('Error in task html:'), error);
+    cb(error);
+  } finally {
+    gutil.log('Finished task html.');
+  }
+});
 gulp.task('html:register', html.register);
-gulp.task('js', bundle);
+gulp.task('js', (cb) => {
+  gutil.log('Starting task js...');
+  try {
+    return bundle(cb);
+  } catch (error) {
+    gutil.log(gutil.colors.red('Error in task js:'), error);
+    cb(error);
+  } finally {
+    gutil.log('Finished task js.');
+  }
+});
 gulp.task('js:register', bundleRegister);
-gulp.task('vendor', vendor);
+gulp.task('vendor', (cb) => {
+  gutil.log('Starting task vendor...');
+  try {
+    return vendor(cb);
+  } catch (error) {
+    gutil.log(gutil.colors.red('Error in task vendor:'), error);
+    cb(error);
+  } finally {
+    gutil.log('Finished task vendor.');
+  }
+});
 gulp.task('rsx:imagemin', rsx.imageMin);
 gulp.task('rsx:imagemin:lossy', rsx.imageMinLossy);
-gulp.task('rsx:copy', rsx.copy);
-gulp.task('rsx:copy:web', rsx.copyWeb);
+gulp.task('rsx:copy', (cb) => {
+  gutil.log('Starting task rsx:copy...');
+  try {
+    return rsx.copy(cb);
+  } catch (error) {
+    gutil.log(gutil.colors.red('Error in task rsx:copy:'), error);
+    cb(error);
+  } finally {
+    gutil.log('Finished task rsx:copy.');
+  }
+});
+gulp.task('rsx:copy:web', (cb) => {
+  gutil.log('Starting task rsx:copy:web...');
+  try {
+    return rsx.copyWeb(cb);
+  } catch (error) {
+    gutil.log(gutil.colors.red('Error in task rsx:copy:web:'), error);
+    cb(error);
+  } finally {
+    gutil.log('Finished task rsx:copy:web.');
+  }
+});
 gulp.task('rsx:copy:cdn', gulp.series(rsx.copyCdn, rsx.copyWeb));
 gulp.task('rsx:copy:all', rsx.copyAll);
-gulp.task('rsx:packages', rsx.packages);
+gulp.task('rsx:packages', (cb) => {
+  gutil.log('Starting task rsx:packages...');
+  try {
+    return rsx.packages(cb);
+  } catch (error) {
+    gutil.log(gutil.colors.red('Error in task rsx:packages:'), error);
+    cb(error);
+  } finally {
+    gutil.log('Finished task rsx:packages.');
+  }
+});
 gulp.task('rsx', gulp.series(rsx.packages, rsx.copy));
 gulp.task('rsx:source_urls', rsx.sourceUrls);
 gulp.task('rsx:build_urls', rsx.buildUrls);
@@ -69,7 +149,17 @@ gulp.task('changelog', git.changelog);
 gulp.task('docker:build', docker.build);
 gulp.task('docker:tag', docker.tag);
 gulp.task('docker:push', docker.push);
-gulp.task('localization:copy', localization.copy);
+gulp.task('localization:copy', (cb) => {
+  gutil.log('Starting task localization:copy...');
+  try {
+    return localization.copy(cb);
+  } catch (error) {
+    gutil.log(gutil.colors.red('Error in task localization:copy:'), error);
+    cb(error);
+  } finally {
+    gutil.log('Finished task localization:copy.');
+  }
+});
 
 // Define git helper tasks (master,staging,production)
 const branches = ['master', 'staging', 'production'];
@@ -134,18 +224,42 @@ gulp.task('autowatch', (cb) => {
 
 // Define aliases for task groupings
 gulp.task('source', gulp.series(
-  validateFirebase,
-  gulp.parallel('vendor', 'css', 'html'),
-  'localization:copy',
-  'rsx:packages',
-  'js',
+  (cb) => {
+    gutil.log('Starting task series source...');
+    try {
+      return gulp.series(
+        validateFirebase,
+        gulp.parallel('vendor', 'css', 'html'),
+        'localization:copy',
+        'rsx:packages',
+        'js',
+      )(cb);
+    } catch (error) {
+      gutil.log(gutil.colors.red('Error in task series source:'), error);
+      cb(error);
+    } finally {
+      gutil.log('Finished task series source.');
+    }
+  }
 ));
 gulp.task('build', gulp.series(
-  'clean:all',
-  'source',
-  'rsx:copy',
-  'rsx:copy:web',
-  // 'autowatch',
+  (cb) => {
+    gutil.log('Starting task series build...');
+    try {
+      return gulp.series(
+        'clean:all',
+        'source',
+        'rsx:copy',
+        'rsx:copy:web',
+        // 'autowatch',
+      )(cb);
+    } catch (error) {
+      gutil.log(gutil.colors.red('Error in task series build:'), error);
+      cb(error);
+    } finally {
+      gutil.log('Finished task series build.');
+    }
+  }
 ));
 gulp.task('build:withallrsx', gulp.series(
   'clean:all',
@@ -183,14 +297,21 @@ gulp.task('default', gulp.series('build'));
 const ciTargets = ['staging', 'production'];
 
 function validateFirebase(cb) {
-  // Ensure FIREBASE_URL is set and valid when building the app.
-  if (process.env.FIREBASE_URL === undefined) {
-    return cb(new Error('FIREBASE_URL must be set'));
+  gutil.log('Starting task validateFirebase...');
+  try {
+    // Ensure FIREBASE_URL is set and valid when building the app.
+    if (process.env.FIREBASE_URL === undefined) {
+      return cb(new Error('FIREBASE_URL must be set'));
+    }
+    if (!process.env.FIREBASE_URL.endsWith('firebaseio.com/')) {
+      return cb(new Error('FIREBASE_URL must end in firebaseio.com/'));
+    }
+    gutil.log('Finished task validateFirebase.');
+    return cb();
+  } catch (error) {
+    gutil.log(gutil.colors.red('Error in task validateFirebase:'), error);
+    return cb(error);
   }
-  if (!process.env.FIREBASE_URL.endsWith('firebaseio.com/')) {
-    return cb(new Error('FIREBASE_URL must end in firebaseio.com/'));
-  }
-  return cb();
 }
 
 function validateConfig(cb) {

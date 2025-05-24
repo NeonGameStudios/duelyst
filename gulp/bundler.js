@@ -47,17 +47,33 @@ if (config.get('datGuiEditorEnabled')) {
 // gutil.log(`bundler options: ${JSON.stringify(opts)}`)
 
 // Initialize bundler
-let bundler = browserify(entries, bundlerOpts);
-if (opts.watch) {
-  bundler = watchify(bundler);
+gutil.log('[BROWSERIFY] Initializing Browserify...');
+let bundler;
+try {
+  bundler = browserify(entries, bundlerOpts);
+  if (opts.watch) {
+    gutil.log('[BROWSERIFY] Enabling Watchify.');
+    bundler = watchify(bundler);
+  }
+  gutil.log('[BROWSERIFY] Browserify initialized successfully.');
+} catch (error) {
+  gutil.log(gutil.colors.red('[BROWSERIFY] Error during Browserify initialization:'), error);
+  // Propagate error to Gulp by throwing it, as this is outside a stream
+  throw error;
 }
 
 // Apply bundler transforms
-// bundler.transform(aliasify, aliasConfig)
-bundler.transform(coffeeify);
-bundler.transform(hbsfy);
-bundler.transform(glslify);
-bundler.transform(envify({
+gutil.log('[BROWSERIFY] Applying transforms...');
+try {
+  // bundler.transform(aliasify, aliasConfig)
+  gutil.log('[BROWSERIFY] Applying coffeeify transform.');
+  bundler.transform(coffeeify);
+  gutil.log('[BROWSERIFY] Applying hbsfy transform.');
+  bundler.transform(hbsfy);
+  gutil.log('[BROWSERIFY] Applying glslify transform.');
+  bundler.transform(glslify);
+  gutil.log('[BROWSERIFY] Applying envify transform.');
+  bundler.transform(envify({
   NODE_ENV: env,
   VERSION: version,
   API_URL: config.get('api'),
@@ -73,17 +89,26 @@ bundler.transform(envify({
   LANDING_PAGE_URL: '/',
   REFERRER_PAGE_URLS: '',
 }));
-// bundler.transform(babelify, {
-//   compact: false
-// })
-if (opts.minify) {
-  gutil.log('[BROWSERIFY] Minifying bundle');
-  bundler.transform(uglifyify);
-  // bundler.plugin(bundleCollapser)
+  // bundler.transform(babelify, {
+  //   compact: false
+  // })
+  if (opts.minify) {
+    gutil.log('[BROWSERIFY] Applying uglifyify transform for minification.');
+    bundler.transform(uglifyify);
+    // bundler.plugin(bundleCollapser)
+  }
+  gutil.log('[BROWSERIFY] Transforms applied successfully.');
+} catch (error) {
+  gutil.log(gutil.colors.red('[BROWSERIFY] Error applying transforms:'), error);
+  // Propagate error to Gulp
+  throw error;
 }
 
 // Re-bundle on update
-bundler.on('update', bundle);
+bundler.on('update', () => {
+  gutil.log('[BROWSERIFY] Watchify detected a change, re-bundling...');
+  bundle();
+});
 
 // Log bundler updates
 bundler.on('update', (files) => {
@@ -96,19 +121,56 @@ bundler.on('log', gutil.log.bind(gutil, '[BROWSERIFY]'));
 
 // export bundle function
 export default function bundle() {
+  gutil.log('[BROWSERIFY] Starting bundle process...');
   return bundler.bundle()
   // log errors if they happen
-    .on('error', (e) => {
-      gutil.log(`[BROWSERIFY] Error: ${e.message}`);
-      notify.onError('Error: <%= error.message %>');
+    .on('error', function (error) {
+      gutil.log(gutil.colors.red('[BROWSERIFY] Error during bundling:'), error.message);
+      if (error.annotated) {
+        gutil.log(gutil.colors.red('[BROWSERIFY] Annotated Error:'), error.annotated);
+      } else if (error.stack) {
+        gutil.log(gutil.colors.red('[BROWSERIFY] Stack Trace:'), error.stack);
+      }
+      notify.onError({
+        title: 'Browserify Error',
+        message: '<%= error.message %>',
+        // Optional: emit an error event to stop the stream if notify doesn't do it.
+        // This is often handled by how Gulp tasks are set up, but being explicit can help.
+      }).call(this, error); // Call notify.onError with `this` context and error
+      // Ensure the stream ends to prevent Gulp from hanging
+      this.emit('end');
     })
     .pipe(source('index.js'))
     .pipe(buffer())
-    .pipe(gif(opts.minify, minify({ mangle: true })))
+    .on('error', function (error) { // Catch errors from vinyl-buffer as well
+      gutil.log(gutil.colors.red('[BROWSERIFY] Error after bundling (e.g., vinyl-buffer):'), error);
+      this.emit('end');
+    })
+    .pipe(gif(opts.minify, minify({ mangle: true })
+      .on('error', function (error) { // Catch errors from uglify
+        gutil.log(gutil.colors.red('[BROWSERIFY] Error during minification (uglify):'), error);
+        this.emit('end');
+      }),
+    ))
     .pipe(rename((p) => {
+      gutil.log(`[BROWSERIFY] Renaming output to 'duelyst${p.extname}'`);
       p.basename = 'duelyst';
       return p.basename;
     }))
-    .pipe(notify())
-    .pipe(gulp.dest('dist/src'));
+    .pipe(notify({
+      title: 'Gulp Watch', // Default title
+      message: (file) => {
+        if (file.isNull()) {
+          return; // Do notreturning anything if the file is null
+        }
+        const successMessage = `[BROWSERIFY] Successfully bundled and wrote ${file.relative}`;
+        gutil.log(successMessage);
+        return successMessage;
+      },
+      onLast: true, // Only notify on the last file
+    }))
+    .pipe(gulp.dest('dist/src'))
+    .on('end', () => {
+      gutil.log('[BROWSERIFY] Finished bundle process.');
+    });
 }
